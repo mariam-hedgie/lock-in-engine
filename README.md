@@ -1,4 +1,12 @@
 # Lock-In Engine
+hello everyone! this is just for fun and studying. please feel free to reach out with suggestions/fixes.
+enjoy!
+
+# todos 
+- add safari
+- run command doesn't double lick in mac os
+- add support for linux and windows
+- UI buttons must be clearer
 
 A corner overlay focus timer for macOS. Stays on top of everything, tracks when you switch apps, and saves session logs automatically.
 
