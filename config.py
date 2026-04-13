@@ -20,6 +20,26 @@ NOTE_H          = 640              # expanded + note field
 FOCUS_POLL_SECS    = 2     # how often to check active app
 FOCUS_DRIFT_GRACE  = 5     # seconds before a switch counts as drift
 
+# ── Chrome extension URL receiver ────────────────────────────────────────────
+# The Chrome extension POSTs the active tab domain to this local port.
+# Change if 27182 is already taken on your machine.
+URL_SERVER_PORT = 27182
+
+# Domains that count as "on task" — won't be logged as drift.
+# Add your study tools so switching to Canvas etc. doesn't get flagged.
+ALLOWED_DOMAINS = {
+    "canvas.instructure.com",
+    "chat.openai.com",
+    "claude.ai",
+    "www.google.com",
+    "google.com",
+    "scholar.google.com",
+    "pubmed.ncbi.nlm.nih.gov",
+    "ncbi.nlm.nih.gov",
+    "localhost",
+    "127.0.0.1",
+}
+
 # ── Git ───────────────────────────────────────────────────────────────────────
 GIT_AUTO_COMMIT    = True          # commit logs/ after each session
 GIT_AUTO_PUSH      = False         # never push automatically

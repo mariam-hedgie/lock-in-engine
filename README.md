@@ -1,261 +1,122 @@
 # Lock-In Engine
 
-# PERSONAL TODO
-- change this to the most recent repo functionality
-- include safari browser
+A corner overlay focus timer for macOS. Stays on top of everything, tracks when you switch apps, and saves session logs automatically.
 
+## Structure
 
-A small desktop focus tool with a floating study timer, short lock-in prompts, session logs, and anti-drift check-ins.
-
-This repo uses Python and `tkinter`, with no third-party Python packages.
-
-## Project Layout
-
-```text
+```
 lock-in-engine/
-├── lock_in.py
-├── focus_watcher.py
-├── logger.py
-├── config.py
-├── setup.sh
-├── run.command
-└── logs/
+├── lock_in.py          ← main app
+├── focus_watcher.py    ← background app-switch detection
+├── logger.py           ← session log + CSV capture writer
+├── config.py           ← all settings (corner, themes, session plan)
+├── setup.sh            ← one-time setup
+├── run.command         ← double-click to launch from Finder
+└── logs/               ← auto-created, open in VSCode
+    ├── 2025-01-15_14-30_mcat-orgo.txt
+    └── 2025-01-15_14-30_mcat-orgo_captures.csv
 ```
 
-## Requirements
-
-- Python 3.9 or newer
-- `tkinter`
-- A terminal you can run Python from
-
-To verify your Python install:
-
-```bash
-python3 --version
-```
-
-To verify `tkinter` works:
-
-```bash
-python3 -m tkinter
-```
-
-If that opens a small test window, `tkinter` is available.
-
-## Quick Start
-
-From the project folder:
-
-```bash
-python3 lock_in.py
-```
-
-Logs are written to `logs/`.
-
-## macOS Setup
-
-### 1. Install Python
-
-Use one of these:
-
-- `python.org` installer
-- Homebrew
-- an existing Python 3 install
-
-If you use Homebrew and `tkinter` is missing:
-
-```bash
-brew install python-tk
-```
-
-### 2. Verify `tkinter`
-
-```bash
-python3 -m tkinter
-```
-
-### 3. Run the app
-
-```bash
-python3 lock_in.py
-```
-
-You can also try:
+## Setup (once)
 
 ```bash
 bash setup.sh
 ```
 
-and then double-click `run.command` from Finder if you want a launcher.
+This checks Python + tkinter, creates `logs/`, makes `run.command` executable, and does an initial git commit.
 
-### 4. macOS permissions
+## Running
 
-The focus watcher may use AppleScript-based app detection depending on how this repo is configured. If macOS asks for permission, allow:
+**From Finder / Desktop:**  
+Double-click `run.command`. macOS opens a terminal and launches the app.
 
-- `Terminal` or your Python app
-- `System Events` / Automation access
-
-Path:
-
-- `System Settings`
-- `Privacy & Security`
-- `Automation`
-
-## Windows Setup
-
-### 1. Install Python
-
-Install Python 3 from:
-
-- the official Python installer
-- Microsoft Store Python
-
-During install, make sure `Add Python to PATH` is enabled if you use the python.org installer.
-
-### 2. Verify `tkinter`
-
-In PowerShell or Command Prompt:
-
-```powershell
-py -m tkinter
-```
-
-If that fails, try:
-
-```powershell
-python -m tkinter
-```
-
-### 3. Run the app
-
-From the project folder:
-
-```powershell
-py lock_in.py
-```
-
-If `py` is not available:
-
-```powershell
-python lock_in.py
-```
-
-### 4. Notes for Windows
-
-- `run.command` is macOS-only
-- `setup.sh` is shell-oriented and not the main Windows path
-- topmost window behavior should still work through `tkinter`
-- app/focus detection may behave differently from macOS depending on the watcher implementation
-
-## Linux Setup
-
-### 1. Install Python and `tkinter`
-
-On Debian/Ubuntu:
-
-```bash
-sudo apt update
-sudo apt install python3 python3-tk
-```
-
-On Fedora:
-
-```bash
-sudo dnf install python3 python3-tkinter
-```
-
-On Arch:
-
-```bash
-sudo pacman -S python tk
-```
-
-### 2. Verify `tkinter`
-
-```bash
-python3 -m tkinter
-```
-
-### 3. Run the app
-
+**From terminal:**
 ```bash
 python3 lock_in.py
 ```
 
-### 4. Notes for Linux
-
-- window manager behavior can vary
-- always-on-top behavior depends partly on your desktop environment
-- focus detection may need small adjustments if your desktop session blocks the current watcher approach
+**From VSCode:**  
+Open the folder, then in the integrated terminal: `python3 lock_in.py`
 
 ## Usage
 
-When you launch the app:
+- **Collapsed:** tiny pill in the corner — shows timer and block. Click to expand.
+- **Expanded:** full UI with action buttons. Press Escape or click away to collapse.
+- **Ctrl+P:** panic mode (3-minute starter block)
+- **Ctrl+Q:** quit
 
-1. Set your run title.
-2. Set your allowed study tools.
-3. Start the session.
-4. Use the anti-drift controls during study:
-   - `Allowed Tools`
-   - `Open Intention`
-   - `Capture`
-   - `Return Mode`
-   - `Break Glass`
+### During a block
+- **Tools** — update allowed study tools
+- **Intention** — log what you're opening and why before you open it
+- **Capture** — save a distraction thought and keep moving
+- **Return** — check if you're still on task
+- **Glass 🔴** — break glass: name it before you leave
 
-Logs are saved automatically.
+## Chrome extension (URL tracking)
 
-## Files Created
+The extension reports the active tab's domain to Lock-In Engine so it can log *which website* you're on inside Chrome, not just that Chrome is open.
 
-Each run can create:
+### Install (one time)
 
-- a text session log in `logs/`
-- a CSV capture file in `logs/`
+1. Open Chrome and go to `chrome://extensions`
+2. Enable **Developer mode** (top-right toggle)
+3. Click **Load unpacked**
+4. Select the `chrome-extension/` folder inside this repo
+5. Done — the extension runs silently in the background
 
-The CSV is useful if you want to review distractions later in Excel.
+### How it works
 
-## Platform Notes
+- When you switch tabs or navigate, the extension POSTs the domain to `http://127.0.0.1:27182`
+- Lock-In Engine's URL server receives it and checks against `ALLOWED_DOMAINS` in `config.py`
+- Allowed domains (Canvas, ChatGPT, Google Scholar etc.) are not logged as drift
+- Everything else (instagram.com, twitter.com, youtube.com etc.) is logged as a drift event — same format as an app-switch
 
-### Supported best on macOS
+### Customise allowed domains
 
-This project appears to be designed primarily around macOS behavior, especially for focus/app watching and the helper scripts in the repo.
+Edit `ALLOWED_DOMAINS` in `config.py` to whitelist your study tools:
 
-### Windows and Linux
+```python
+ALLOWED_DOMAINS = {
+    "canvas.instructure.com",
+    "chat.openai.com",
+    "pubmed.ncbi.nlm.nih.gov",
+    # add yours here
+}
+```
 
-The main `tkinter` app should still run, but you may see small differences in:
+### If the extension can't connect
 
-- focus watcher behavior
-- always-on-top behavior
-- notification behavior
-- window styling
+That just means Lock-In Engine isn't running — the extension silently ignores connection errors. App-switch detection via `osascript` continues to work regardless.
 
-## Troubleshooting
 
-### `ModuleNotFoundError` or Python command not found
 
-Make sure Python 3 is installed and available on your PATH.
+Every session creates two files in `logs/`:
 
-### `No module named tkinter`
+- `YYYY-MM-DD_HH-MM_title.txt` — human-readable session log
+- `YYYY-MM-DD_HH-MM_title_captures.csv` — structured capture events
 
-Install the platform `tkinter` package:
+Open `logs/` in VSCode to see all sessions. After each session a `git commit` is made automatically so every session is in your repo history. Push manually when you want.
 
-- macOS Homebrew: `brew install python-tk`
-- Ubuntu/Debian: `sudo apt install python3-tk`
-- Fedora: `sudo dnf install python3-tkinter`
-- Arch: `sudo pacman -S tk`
+## Settings
 
-### The app opens but looks different on my OS
+Edit `config.py` to change:
+- `CORNER` — which corner the widget lives in (`"bottom-right"` etc.)
+- `CORNER_MARGIN` — distance from screen edge
+- `MINI_W / MINI_H` — collapsed size
+- `SESSION_PLAN` — block durations in minutes
+- `GIT_AUTO_COMMIT` — set to `False` to disable auto-commits
 
-That is expected. `tkinter` rendering varies by platform and theme.
+## macOS permissions
 
-### Focus/app detection does not seem accurate
+Focus detection uses `osascript` to check the frontmost app every 2 seconds. On first run macOS may ask for Automation permission:
 
-Start by checking `focus_watcher.py`. That part is the most platform-sensitive piece of the project.
+> System Settings → Privacy & Security → Automation → Terminal → System Events ✓
 
-## Development
+This is required for app-switch detection to work.
 
-If you want to tweak the experience, start with:
+## Requirements
 
-- `config.py` for plan/theme/settings
-- `lock_in.py` for the UI and app flow
-- `focus_watcher.py` for app-switch detection
-- `logger.py` for session and CSV logging
+- macOS 12+
+- Python 3.9+
+- tkinter (included with python.org installer; for Homebrew: `brew install python-tk`)
+- No other dependencies
