@@ -1,5 +1,10 @@
 # Lock-In Engine
 
+# PERSONAL TODO
+- change this to the most recent repo functionality
+- include safari browser
+
+
 A small desktop focus tool with a floating study timer, short lock-in prompts, session logs, and anti-drift check-ins.
 
 This repo uses Python and `tkinter`, with no third-party Python packages.
