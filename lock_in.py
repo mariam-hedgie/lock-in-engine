@@ -42,6 +42,7 @@ class LockInEngine:
         self.root.attributes("-alpha", 0.96)
         self.root.overrideredirect(True)
         self.root.resizable(True, True)
+        self.root.protocol("WM_DELETE_WINDOW", self._handle_quit)
 
         try:
             self.root.tk.call(
@@ -68,6 +69,11 @@ class LockInEngine:
         self.allowed_tools  = ["Canvas", "PDFs", "Goodnotes", "ChatGPT"]
         self.session_log: Optional[SessionLogger] = None
         self.drift_secs     = 0
+        self.intentions_logged = 0
+        self.return_checks = 0
+        self.break_glass_count = 0
+        self.later_tasks: list[dict[str, str]] = []
+        self._session_finalized = False
         self.is_drifting    = False
         self.theme          = THEMES[0]
         self.prev_theme: Optional[dict] = None
@@ -166,27 +172,28 @@ class LockInEngine:
 
         self.toggle_btn = tk.Button(
             self.mini_frame, textvariable=self.sv_toggle,
-            font=("Menlo", 13), relief="flat", bd=0, cursor="hand2",
+            font=("Menlo", 15, "bold"), relief="flat", bd=0, cursor="hand2",
+            padx=8, pady=4,
             command=self._toggle,
         )
         self.toggle_btn.place(relx=1.0, y=6, anchor="ne", x=-6)
 
         self.drift_mini = tk.Label(
             self.mini_frame, textvariable=self.sv_drift,
-            font=("Menlo", 9), anchor="w",
+            font=("Menlo", 10, "bold"), anchor="w",
         )
         self.drift_mini.place(x=8, y=6)
 
         self.mini_line = tk.Label(
             self.mini_frame, textvariable=self.sv_line,
-            font=("Georgia", 10, "italic"),
+            font=("Georgia", 11, "italic"),
             wraplength=MINI_W - 24, justify="center",
         )
         self.mini_line.place(relx=0.5, y=22, anchor="n")
 
         self.timer_mini = tk.Label(
             self.mini_frame, textvariable=self.sv_timer,
-            font=("Menlo", 30, "bold"), anchor="center",
+            font=("Menlo", 34, "bold"), anchor="center",
         )
         self.timer_mini.place(relx=0.5, rely=0.5, anchor="center", y=6)
         self.timer_mini.bind("<Button-1>",       self._drag_start)
@@ -195,7 +202,7 @@ class LockInEngine:
 
         self.charm_mini = tk.Label(
             self.mini_frame, textvariable=self.sv_charm,
-            font=("Menlo", 9),
+            font=("Menlo", 10),
         )
         self.charm_mini.place(relx=0.5, rely=1.0, anchor="s", y=-5)
 
@@ -207,44 +214,45 @@ class LockInEngine:
         hdr.pack(fill="x", padx=10, pady=(8, 0))
         self.theme_badge = tk.Label(
             hdr, textvariable=self.sv_theme,
-            font=("Menlo", 9), padx=8, pady=2,
+            font=("Menlo", 10, "bold"), padx=10, pady=4,
         )
         self.theme_badge.pack(side="left")
         tk.Button(
             hdr, text="▴ collapse",
-            font=("Menlo", 9), relief="flat", bd=0, cursor="hand2",
+            font=("Menlo", 10, "bold"), relief="flat", bd=0, cursor="hand2",
+            padx=8, pady=4,
             command=lambda: self._animate_to(False),
         ).pack(side="right")
 
         self.drift_full = tk.Label(
             self.full_frame, textvariable=self.sv_drift,
-            font=("Menlo", 9), anchor="center",
+            font=("Menlo", 11, "bold"), anchor="center",
         )
         self.drift_full.pack(fill="x", padx=10)
 
         self.main_lbl = tk.Label(
             self.full_frame, textvariable=self.sv_line,
-            font=("Georgia", 14, "italic"),
+            font=("Georgia", 17, "italic"),
             wraplength=FULL_W - 30, justify="center",
         )
         self.main_lbl.pack(fill="x", padx=12, pady=(6, 0))
 
         self.sub_lbl = tk.Label(
             self.full_frame, textvariable=self.sv_sub,
-            font=("Helvetica", 10),
+            font=("Helvetica", 12),
             wraplength=FULL_W - 30, justify="center",
         )
         self.sub_lbl.pack(fill="x", padx=12)
 
         self.timer_big = tk.Label(
             self.full_frame, textvariable=self.sv_timer,
-            font=("Menlo", 56, "bold"), anchor="center",
+            font=("Menlo", 62, "bold"), anchor="center",
         )
         self.timer_big.pack(fill="x", pady=(2, 0))
 
         self.prog_lbl = tk.Label(
             self.full_frame, textvariable=self.sv_prog,
-            font=("Menlo", 9),
+            font=("Menlo", 11, "bold"),
             wraplength=FULL_W - 20, justify="center",
         )
         self.prog_lbl.pack(fill="x", padx=10)
@@ -256,7 +264,7 @@ class LockInEngine:
 
         self.charm_full = tk.Label(
             self.full_frame, textvariable=self.sv_charm,
-            font=("Menlo", 9),
+            font=("Menlo", 11, "bold"),
         )
         self.charm_full.pack(pady=(4, 0))
 
@@ -266,40 +274,40 @@ class LockInEngine:
         self.intro_frame = tk.Frame(self.full_frame, bd=0)
         tk.Label(
             self.intro_frame, text="Run title",
-            font=("Helvetica", 10, "bold"), anchor="w",
+            font=("Helvetica", 12, "bold"), anchor="w",
         ).pack(fill="x", padx=14)
         self.title_entry = tk.Entry(
             self.intro_frame, textvariable=self.sv_title,
-            font=("Helvetica", 12), relief="flat", justify="center",
+            font=("Helvetica", 14), relief="flat", justify="center",
         )
-        self.title_entry.pack(fill="x", ipady=5, padx=14, pady=(2, 8))
+        self.title_entry.pack(fill="x", ipady=8, padx=14, pady=(2, 8))
         tk.Label(
             self.intro_frame, text="Allowed tools",
-            font=("Helvetica", 10, "bold"), anchor="w",
+            font=("Helvetica", 12, "bold"), anchor="w",
         ).pack(fill="x", padx=14)
         self.tools_entry = tk.Entry(
             self.intro_frame, textvariable=self.sv_tools,
-            font=("Helvetica", 11), relief="flat", justify="center",
+            font=("Helvetica", 13), relief="flat", justify="center",
         )
-        self.tools_entry.pack(fill="x", ipady=5, padx=14, pady=(2, 0))
+        self.tools_entry.pack(fill="x", ipady=8, padx=14, pady=(2, 0))
 
         # Note field
         self.note_frame = tk.Frame(self.full_frame, bd=0)
         tk.Label(
             self.note_frame, text="One line — what just happened?",
-            font=("Helvetica", 10, "bold"), anchor="w",
+            font=("Helvetica", 12, "bold"), anchor="w",
         ).pack(fill="x", padx=14)
         self.note_entry = tk.Entry(
             self.note_frame, textvariable=self.sv_note,
-            font=("Helvetica", 11), relief="flat", justify="center",
+            font=("Helvetica", 13), relief="flat", justify="center",
         )
-        self.note_entry.pack(fill="x", ipady=5, padx=14, pady=(2, 0))
+        self.note_entry.pack(fill="x", ipady=8, padx=14, pady=(2, 0))
 
         # Primary button
         self.btn_primary = tk.Button(
             self.full_frame, text="Lock In →",
-            font=("Helvetica", 12, "bold"),
-            relief="flat", bd=0, padx=10, pady=9,
+            font=("Helvetica", 14, "bold"),
+            relief="flat", bd=0, padx=12, pady=12,
             command=self._start_run,
         )
         self.btn_primary.pack(fill="x", padx=14, pady=(10, 0))
@@ -308,26 +316,31 @@ class LockInEngine:
         self.action_row = tk.Frame(self.full_frame, bd=0)
         self.action_row.pack(fill="x", padx=14, pady=(7, 0))
         self._action_btns: list[tk.Button] = []
-        for label, cmd in (
+        for idx, (label, cmd) in enumerate((
             ("Tools",     lambda: self._popup("allowed")),
             ("Intention", lambda: self._popup("intention")),
+            ("Later",     lambda: self._popup("later")),
             ("Capture",   lambda: self._popup("capture")),
             ("Return",    lambda: self._popup("return")),
             ("🔴 Glass",  lambda: self._popup("break")),
-        ):
+            ("End Session", self._confirm_end_session),
+        )):
             b = tk.Button(
                 self.action_row, text=label,
-                font=("Helvetica", 9, "bold"),
-                relief="flat", bd=0, padx=4, pady=6,
+                font=("Helvetica", 11, "bold"),
+                relief="flat", bd=0, padx=8, pady=11,
                 command=cmd,
             )
-            b.pack(side="left", expand=True, fill="x", padx=2)
+            row, col = divmod(idx, 3)
+            b.grid(row=row, column=col, sticky="nsew", padx=4, pady=4)
             self._action_btns.append(b)
+        for col in range(3):
+            self.action_row.grid_columnconfigure(col, weight=1)
 
         tk.Label(
             self.full_frame,
-            text="drag to move  ·  drag corner to resize  ·  esc to collapse",
-            font=("Menlo", 8),
+            text="drag to move  ·  esc to collapse  ·  ctrl+q to quit",
+            font=("Menlo", 9),
         ).pack(pady=(6, 6))
 
     # ── Tracker ───────────────────────────────────────────────────────────────
@@ -387,8 +400,9 @@ class LockInEngine:
                     widget.configure(bg=surf, fg=text)
                 elif cls == "Button":
                     widget.configure(
-                        bg=bg, fg=muted,
-                        activebackground=surf, activeforeground=text,
+                        bg=bg, fg=text,
+                        activebackground=acc, activeforeground=bg,
+                        highlightthickness=0,
                     )
                 elif cls == "Entry":
                     widget.configure(
@@ -409,8 +423,25 @@ class LockInEngine:
         self.charm_full.configure(fg=acc)
         self.drift_full.configure(fg=dc)
         self.btn_primary.configure(
-            bg=acc, fg=bg, activebackground=muted, activeforeground=bg
+            bg=acc, fg=bg, activebackground=text, activeforeground=bg
         )
+        for btn in self._action_btns:
+            label = btn.cget("text")
+            if label == "End Session":
+                btn.configure(
+                    bg=danger, fg=bg,
+                    activebackground=text, activeforeground=bg,
+                )
+            elif label in {"Capture", "Later"}:
+                btn.configure(
+                    bg=acc, fg=bg,
+                    activebackground=text, activeforeground=bg,
+                )
+            else:
+                btn.configure(
+                    bg=bg, fg=text,
+                    activebackground=acc, activeforeground=bg,
+                )
         self._refresh_tracker()
 
     def _pick_theme(self) -> None:
@@ -486,7 +517,7 @@ class LockInEngine:
             self.action_row.pack(fill="x", padx=14, pady=(7, 0))
 
         elif self.state == "finished":
-            self.btn_primary.configure(text="Close", command=self.root.destroy)
+            self.btn_primary.configure(text="Close", command=self._shutdown)
             self.btn_primary.pack(fill="x", padx=14, pady=(10, 0))
 
     # ── Keyboard ──────────────────────────────────────────────────────────────
@@ -505,12 +536,15 @@ class LockInEngine:
         return "break"
 
     def _handle_quit(self, _=None) -> str:
-        if messagebox.askyesno("Quit", "Exit Lock-In Engine?"):
-            if self.tick_id:
-                self.root.after_cancel(self.tick_id)
-            self.watcher.stop()
-            self.url_watcher.stop()
-            self.root.destroy()
+        if self.state == "finished":
+            if messagebox.askyesno("Quit", "Close Lock-In Engine?"):
+                self._shutdown()
+        elif self.state in {"countdown", "note"} and self.session_log:
+            if messagebox.askyesno("Quit", "Exit and end this session?"):
+                self._end_session("Quit app", close_after=True)
+        else:
+            if messagebox.askyesno("Quit", "Exit Lock-In Engine?"):
+                self._shutdown()
         return "break"
 
     # ── Session flow ──────────────────────────────────────────────────────────
@@ -523,6 +557,11 @@ class LockInEngine:
         self.session_log   = SessionLogger(title, self.allowed_tools)
         self.capture_count = 0
         self.drift_secs    = 0
+        self.intentions_logged = 0
+        self.return_checks = 0
+        self.break_glass_count = 0
+        self.later_tasks = []
+        self._session_finalized = False
         self.block_index   = 0
         self.total_done    = 0
 
@@ -643,21 +682,127 @@ class LockInEngine:
         self.state = "finished"
         if self.tick_id:
             self.root.after_cancel(self.tick_id)
+            self.tick_id = None
         self.watcher.set_active(False)
         self.url_watcher.set_active(False)
         self._pick_theme()
         self.sv_line.set("3 hours. Done.")
-        self.sv_sub.set("you stayed in it")
+        self.sv_sub.set("session report ready")
         self.sv_timer.set("DONE")
         self.sv_charm.set("done is cute too")
-        self.sv_prog.set(
-            f"{self.total_done} min · {self.capture_count} captures · ~{self.drift_secs}s drift"
-        )
-        if self.session_log:
-            self.session_log.finish(self.total_done, self.drift_secs, self.capture_count)
+        self.sv_prog.set(self._summary_line())
+        self._finalize_session("Completed full plan")
         self._chime(3)
         self._refresh_tracker()
         self._animate_to(True)
+        self._show_report("Completed full plan")
+
+    def _summary_metrics(self) -> dict[str, int | str]:
+        blocks_completed = 0
+        running_total = 0
+        for mins in SESSION_PLAN:
+            running_total += mins
+            if self.total_done >= running_total:
+                blocks_completed += 1
+        focus_score = max(
+            0,
+            min(
+                100,
+                int(round(((max(self.total_done * 60 - self.drift_secs, 0)) /
+                           max(self.total_done * 60, 1)) * 100)),
+            ),
+        )
+        return {
+            "blocks_completed": blocks_completed,
+            "intentions": self.intentions_logged,
+            "return_checks": self.return_checks,
+            "break_glass": self.break_glass_count,
+            "later_tasks": len(self.later_tasks),
+            "focus_score": focus_score,
+        }
+
+    def _summary_line(self) -> str:
+        metrics = self._summary_metrics()
+        return (
+            f"{self.total_done}/{TOTAL_MINUTES} min · "
+            f"{self.capture_count} captures · "
+            f"{len(self.later_tasks)} later tasks · "
+            f"~{self.drift_secs}s drift · "
+            f"{metrics['focus_score']}% focus"
+        )
+
+    def _report_text(self, reason: str) -> str:
+        metrics = self._summary_metrics()
+        lines = [
+            f"Reason: {reason}",
+            f"Completed: {self.total_done}/{TOTAL_MINUTES} minutes",
+            f"Blocks done: {metrics['blocks_completed']}/{TOTAL_BLOCKS}",
+            f"Focus score: {metrics['focus_score']}%",
+            f"Drift logged: ~{self.drift_secs} seconds",
+            f"Intentions logged: {self.intentions_logged}",
+            f"Distractions captured: {self.capture_count}",
+            f"Return checks: {self.return_checks}",
+            f"Break glass events: {self.break_glass_count}",
+            f"Later tasks parked: {len(self.later_tasks)}",
+        ]
+        if self.later_tasks:
+            lines.append("")
+            lines.append("For later:")
+            for idx, item in enumerate(self.later_tasks, start=1):
+                task = item.get("task", "Untitled task")
+                note = item.get("notes", "").strip()
+                lines.append(f"{idx}. {task}" + (f" — {note}" if note else ""))
+        return "\n".join(lines)
+
+    def _finalize_session(self, reason: str) -> None:
+        if self._session_finalized or not self.session_log:
+            return
+        metrics = self._summary_metrics()
+        self.session_log.finish(
+            self.total_done,
+            self.drift_secs,
+            self.capture_count,
+            self.later_tasks,
+            metrics,
+            reason,
+        )
+        self._session_finalized = True
+
+    def _show_report(self, reason: str) -> None:
+        messagebox.showinfo("Session report", self._report_text(reason))
+
+    def _shutdown(self) -> None:
+        if self.tick_id:
+            self.root.after_cancel(self.tick_id)
+            self.tick_id = None
+        self.watcher.stop()
+        self.url_watcher.stop()
+        self.root.destroy()
+
+    def _end_session(self, reason: str, close_after: bool) -> None:
+        self.state = "finished"
+        if self.tick_id:
+            self.root.after_cancel(self.tick_id)
+            self.tick_id = None
+        self.watcher.set_active(False)
+        self.url_watcher.set_active(False)
+        self.sv_line.set("Session ended.")
+        self.sv_sub.set("report saved to logs")
+        self.sv_timer.set("DONE")
+        self.sv_charm.set("you can pick it back up later")
+        self.sv_prog.set(self._summary_line())
+        self._finalize_session(reason)
+        self._show_report(reason)
+        if close_after:
+            self._shutdown()
+        else:
+            self._animate_to(True)
+
+    def _confirm_end_session(self) -> None:
+        if self.state not in {"countdown", "note"}:
+            return
+        if messagebox.askyesno("End Session", "End this session now and save a report?"):
+            self._end_session("Ended early from app", close_after=False)
 
     # ── Focus watcher callbacks ───────────────────────────────────────────────
 
@@ -703,7 +848,7 @@ class LockInEngine:
         def lbl(text: str, bold: bool = False, color: Optional[str] = None) -> None:
             tk.Label(
                 frame, text=text,
-                font=("Helvetica", 11, "bold" if bold else "normal"),
+                font=("Helvetica", 12, "bold" if bold else "normal"),
                 bg=t["surface"], fg=color or t["text"],
                 wraplength=pw - 44, justify="left", anchor="w",
             ).pack(fill="x", pady=(0, 3))
@@ -712,21 +857,23 @@ class LockInEngine:
             sv = tk.StringVar()
             e = tk.Entry(
                 frame, textvariable=sv,
-                font=("Helvetica", 11), relief="flat",
+                font=("Helvetica", 12), relief="flat",
                 bg=t["bg"], fg=t["text"],
                 insertbackground=t["text"], justify="center",
             )
-            e.pack(fill="x", ipady=5, pady=(0, 7))
+            e.pack(fill="x", ipady=8, pady=(0, 8))
             e.focus_set()
             return sv
 
         def btn(text: str, cmd, primary: bool = True) -> None:
             tk.Button(
                 frame, text=text,
-                font=("Helvetica", 11, "bold"),
+                font=("Helvetica", 12, "bold"),
                 bg=t["accent"] if primary else t["bg"],
-                fg=t["bg"] if primary else t["muted"],
+                fg=t["bg"] if primary else t["text"],
                 relief="flat", bd=0, padx=8, pady=7,
+                activebackground=t["text"] if primary else t["accent"],
+                activeforeground=t["bg"],
                 command=cmd,
             ).pack(fill="x", pady=2)
 
@@ -756,9 +903,28 @@ class LockInEngine:
                 reason = sv_reason.get().strip() or "no reason"
                 if self.session_log:
                     self.session_log.capture("intent", "study_tool", tool, reason)
+                self.intentions_logged += 1
                 self.sv_sub.set(f"open {tool} for: {reason}")
                 close()
             btn("Log intention →", save)
+            btn("Cancel", close, primary=False)
+
+        elif kind == "later":
+            lbl("Park it for later", bold=True)
+            lbl("What do you need to remember?", color=t["muted"])
+            sv_task = entry_field()
+            lbl("Context (optional)", color=t["muted"])
+            sv_notes = entry_field()
+            def save():
+                task = sv_task.get().strip() or "Untitled follow-up"
+                notes = sv_notes.get().strip()
+                item = {"task": task, "notes": notes}
+                self.later_tasks.append(item)
+                if self.session_log:
+                    self.session_log.capture("later_task", "backlog", task, notes)
+                self.sv_charm.set(f"saved for later: {task[:24]}")
+                close()
+            btn("Save for later →", save)
             btn("Cancel", close, primary=False)
 
         elif kind == "capture":
@@ -784,11 +950,13 @@ class LockInEngine:
             def yes():
                 if self.session_log:
                     self.session_log.capture("return_check", "yes", "on_task", "confirmed")
+                self.return_checks += 1
                 self.sv_sub.set("good. stay with it.")
                 close()
             def reset():
                 if self.session_log:
                     self.session_log.capture("return_check", "reset", "recenter", "needed reset")
+                self.return_checks += 1
                 self.sv_sub.set("back to the tab you meant to open.")
                 close()
             btn("Yes, still there →", yes)
@@ -807,6 +975,7 @@ class LockInEngine:
                 n  = sv_notes.get().strip() or ""
                 if self.session_log:
                     self.session_log.capture("break_glass", "captured_instead", t2, n)
+                self.break_glass_count += 1
                 self.capture_count += 1
                 close()
             def go_anyway():
@@ -814,6 +983,7 @@ class LockInEngine:
                 n  = sv_notes.get().strip() or ""
                 if self.session_log:
                     self.session_log.capture("break_glass", "override", t2, n)
+                self.break_glass_count += 1
                 self.sv_sub.set("fine. make it brief.")
                 close()
             btn("Capture instead →", capture_it)

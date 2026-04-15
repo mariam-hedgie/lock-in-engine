@@ -2,15 +2,19 @@
 hello everyone! this is just for fun and studying. please feel free to reach out with suggestions/fixes.
 enjoy!
 
-# todos 
-- add safari
-- run command doesn't double lick in mac os
-- add support for linux and windows
-- UI buttons must be clearer
-- make requirements
-- make gitignore
-
 A corner overlay focus timer for macOS. Stays on top of everything, tracks when you switch apps, and saves session logs automatically.
+
+## Current status
+
+- macOS launcher included: `Lock-In Engine.app` and `run.command`
+- Bigger, higher-contrast action buttons for the main controls
+- Session reports are shown when you finish, end early, or quit
+- "Later" capture button parks follow-up tasks so you can stay focused now
+
+## Known limitations
+
+- Safari tab tracking is not built yet
+- Linux and Windows are not supported yet
 
 ## Structure
 
@@ -23,6 +27,8 @@ lock-in-engine/
 ├── setup.sh            ← one-time setup
 ├── run.command         ← double-click to launch from Finder
 ├── Lock-In Engine.app  ← one-click macOS app launcher
+├── requirements.txt    ← no external deps, tkinter required
+├── .gitignore          ← ignores cache + Finder files
 └── logs/               ← auto-created, open in VSCode
     ├── 2025-01-15_14-30_mcat-orgo.txt
     └── 2025-01-15_14-30_mcat-orgo_captures.csv
@@ -62,9 +68,11 @@ Open the folder, then in the integrated terminal: `python3 lock_in.py`
 ### During a block
 - **Tools** — update allowed study tools
 - **Intention** — log what you're opening and why before you open it
+- **Later** — save a task for later so it stops tugging at your attention now
 - **Capture** — save a distraction thought and keep moving
 - **Return** — check if you're still on task
 - **Glass 🔴** — break glass: name it before you leave
+- **End Session** — stop early and still get a full report saved to logs
 
 ## Chrome extension (URL tracking)
 
@@ -108,6 +116,14 @@ Every session creates two files in `logs/`:
 
 - `YYYY-MM-DD_HH-MM_title.txt` — human-readable session log
 - `YYYY-MM-DD_HH-MM_title_captures.csv` — structured capture events
+
+When a session ends, the final report includes:
+
+- total focused minutes completed
+- drift time
+- distraction captures
+- intentions, return checks, and break-glass events
+- tasks you parked for later
 
 Open `logs/` in VSCode to see all sessions. After each session a `git commit` is made automatically so every session is in your repo history. Push manually when you want.
 

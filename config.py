@@ -12,9 +12,9 @@ TOTAL_MINUTES  = 180
 # ── Window ───────────────────────────────────────────────────────────────────
 CORNER          = "bottom-right"   # "bottom-right" | "bottom-left" | "top-right" | "top-left"
 CORNER_MARGIN   = 20               # px from screen edge
-MINI_W, MINI_H  = 280, 88          # collapsed size
-FULL_W, FULL_H  = 440, 580         # expanded size
-NOTE_H          = 640              # expanded + note field
+MINI_W, MINI_H  = 312, 100         # collapsed size
+FULL_W, FULL_H  = 500, 680         # expanded size
+NOTE_H          = 740              # expanded + note field
 
 # ── Focus watcher ─────────────────────────────────────────────────────────────
 FOCUS_POLL_SECS    = 2     # how often to check active app
@@ -47,19 +47,19 @@ GIT_AUTO_PUSH      = False         # never push automatically
 # ── Themes ────────────────────────────────────────────────────────────────────
 THEMES = [
     {"name": "Matcha Night", "bg": "#0f1410", "surface": "#1d2820",
-     "accent": "#6fcf8a", "muted": "#7a9480", "text": "#e8f0e9", "danger": "#e07060"},
+     "accent": "#8BE5A1", "muted": "#A8B7AB", "text": "#F4FAF5", "danger": "#FF8A78"},
     {"name": "Blue Hour",    "bg": "#0d1218", "surface": "#1b2433",
-     "accent": "#7bb8ff", "muted": "#7a90a8", "text": "#eef4ff", "danger": "#e07060"},
+     "accent": "#94CBFF", "muted": "#A8B6C8", "text": "#F5F9FF", "danger": "#FF8A78"},
     {"name": "Rose Dust",    "bg": "#150f12", "surface": "#281e24",
-     "accent": "#e8829e", "muted": "#9a7a84", "text": "#f9eef4", "danger": "#e07060"},
+     "accent": "#F39BB4", "muted": "#C0A6AE", "text": "#FFF7FB", "danger": "#FF8A78"},
     {"name": "Plum Ink",     "bg": "#100c18", "surface": "#221d38",
-     "accent": "#b49fff", "muted": "#8a80a8", "text": "#f4efff", "danger": "#e07060"},
+     "accent": "#C9B7FF", "muted": "#B1A9CD", "text": "#FBF8FF", "danger": "#FF8A78"},
     {"name": "Sea Glass",    "bg": "#0c1618", "surface": "#1c2c31",
-     "accent": "#72d3c9", "muted": "#769aa0", "text": "#ebf7f7", "danger": "#e07060"},
+     "accent": "#8CE6DD", "muted": "#A2B9BE", "text": "#F3FBFB", "danger": "#FF8A78"},
     {"name": "Amber Fog",    "bg": "#171008", "surface": "#2e220f",
-     "accent": "#f0b866", "muted": "#a09060", "text": "#fbf3e8", "danger": "#e07060"},
+     "accent": "#FFD08A", "muted": "#C4B58E", "text": "#FFF9F0", "danger": "#FF8A78"},
     {"name": "Cocoa Mint",   "bg": "#12100a", "surface": "#28251a",
-     "accent": "#a0d4a8", "muted": "#8a9c84", "text": "#f7f4ea", "danger": "#e07060"},
+     "accent": "#B8E9BF", "muted": "#AFB6A3", "text": "#FFFDF5", "danger": "#FF8A78"},
 ]
 
 # ── Motivational messages (shown every minute) ────────────────────────────────

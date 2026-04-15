@@ -1,0 +1,2 @@
+# No external Python packages are required.
+# This app uses the Python standard library plus tkinter.

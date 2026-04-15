@@ -70,17 +70,35 @@ class SessionLogger:
         self.capture("drift", "focus", app_name, f"{duration_secs}s away")
 
     def finish(self, total_done: int, drift_secs: int,
-               capture_count: int) -> None:
+               capture_count: int,
+               later_tasks: list[dict[str, str]],
+               metrics: dict[str, int | str],
+               reason: str) -> None:
         finished = datetime.now()
         elapsed  = finished - self.started
         elapsed_str = str(elapsed).split(".")[0]
         with self.log_path.open("a", encoding="utf-8") as f:
             f.write(f"\n{'='*60}\n")
             f.write(f"FINISHED   : {finished.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"Reason     : {reason}\n")
             f.write(f"Elapsed    : {elapsed_str}\n")
             f.write(f"Completed  : {total_done}/{TOTAL_MINUTES} min\n")
             f.write(f"Drift      : ~{drift_secs}s across all blocks\n")
             f.write(f"Distractions captured: {capture_count}\n")
+            f.write(f"Intentions logged   : {metrics.get('intentions', 0)}\n")
+            f.write(f"Return checks       : {metrics.get('return_checks', 0)}\n")
+            f.write(f"Break glass events  : {metrics.get('break_glass', 0)}\n")
+            f.write(f"Later tasks parked  : {metrics.get('later_tasks', 0)}\n")
+            f.write(f"Blocks completed    : {metrics.get('blocks_completed', 0)}\n")
+            f.write(f"Session score       : {metrics.get('focus_score', 'n/a')}%\n")
+            if later_tasks:
+                f.write("\nFor later:\n")
+                for idx, task in enumerate(later_tasks, start=1):
+                    note = task.get("notes", "").strip()
+                    line = f"  {idx}. {task.get('task', 'Untitled task')}"
+                    if note:
+                        line += f" | {note}"
+                    f.write(line + "\n")
             f.write(f"{'='*60}\n")
         if GIT_AUTO_COMMIT:
             self._git_commit()
