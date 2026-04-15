@@ -2,11 +2,12 @@
 hello everyone! this is just for fun and studying. please feel free to reach out with suggestions/fixes.
 enjoy!
 
-A corner overlay focus timer for macOS. Stays on top of everything, tracks when you switch apps, and saves session logs automatically.
+A corner overlay focus timer for macOS and Windows. Stays on top of everything, tracks when you switch apps, and saves session logs automatically.
 
 ## Current status
 
 - macOS launcher included: `Lock-In Engine.app` and `run.command`
+- Windows launchers included: `run.bat` and `setup.bat`
 - Bigger, higher-contrast action buttons for the main controls
 - Session reports are shown when you finish, end early, or quit
 - "Later" capture button parks follow-up tasks so you can stay focused now
@@ -14,7 +15,7 @@ A corner overlay focus timer for macOS. Stays on top of everything, tracks when 
 ## Known limitations
 
 - Safari tab tracking is not built yet
-- Linux and Windows are not supported yet
+- Linux is not supported yet
 
 ## Structure
 
@@ -25,7 +26,9 @@ lock-in-engine/
 ├── logger.py           ← session log + CSV capture writer
 ├── config.py           ← all settings (corner, themes, session plan)
 ├── setup.sh            ← one-time setup
+├── setup.bat           ← one-time setup for Windows
 ├── run.command         ← double-click to launch from Finder
+├── run.bat             ← double-click to launch on Windows
 ├── Lock-In Engine.app  ← one-click macOS app launcher
 ├── requirements.txt    ← no external deps, tkinter required
 ├── .gitignore          ← ignores cache + Finder files
@@ -36,23 +39,44 @@ lock-in-engine/
 
 ## Setup (once)
 
+### macOS
+
 ```bash
 bash setup.sh
 ```
 
 This checks Python + tkinter, creates `logs/`, makes `run.command` executable, and does an initial git commit.
 
+### Windows
+
+Double-click `setup.bat`, or run this in Command Prompt:
+
+```bat
+setup.bat
+```
+
+This checks Python + tkinter, creates `logs\`, and prepares the repo for session logs.
+
 ## Running
 
-**From Finder / Desktop:**  
+**macOS, from Finder / Desktop:**  
 Open `Lock-In Engine.app` for the easiest one-click launch.
 
-**Alternate Finder launcher:**  
+**macOS alternate launcher:**  
 Double-click `run.command`. macOS opens a Terminal window and launches the app.
 
-**From terminal:**
+**Windows launcher:**  
+Double-click `run.bat`.
+
+**From terminal / Command Prompt:**
 ```bash
 python3 lock_in.py
+```
+
+On Windows you can use:
+
+```bat
+python lock_in.py
 ```
 
 **From VSCode:**  
@@ -61,9 +85,10 @@ Open the folder, then in the integrated terminal: `python3 lock_in.py`
 ## Usage
 
 - **Collapsed:** tiny pill in the corner — shows timer and block. Click to expand.
-- **Expanded:** full UI with action buttons. Press Escape or click away to collapse.
+- **Expanded:** full UI with action buttons. Press Escape to collapse.
 - **Ctrl+P:** panic mode (3-minute starter block)
 - **Ctrl+Q:** quit
+- **Corner drag:** use the bottom-right corner grip to resize either the collapsed or expanded view
 
 ### During a block
 - **Tools** — update allowed study tools
@@ -136,7 +161,9 @@ Edit `config.py` to change:
 - `SESSION_PLAN` — block durations in minutes
 - `GIT_AUTO_COMMIT` — set to `False` to disable auto-commits
 
-## macOS permissions
+## Permissions
+
+### macOS
 
 Focus detection uses `osascript` to check the frontmost app every 2 seconds. On first run macOS may ask for Automation permission:
 
@@ -144,9 +171,13 @@ Focus detection uses `osascript` to check the frontmost app every 2 seconds. On 
 
 This is required for app-switch detection to work.
 
+### Windows
+
+No extra setup is usually needed for app-switch detection. If focus tracking looks wrong, make sure you launched the app with normal desktop access and not from a restricted remote shell.
+
 ## Requirements
 
-- macOS 12+
+- macOS 12+ or Windows 10+
 - Python 3.9+
 - tkinter (included with python.org installer; for Homebrew: `brew install python-tk`)
 - No other dependencies

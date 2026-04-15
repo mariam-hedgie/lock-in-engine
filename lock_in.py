@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Lock-In Engine — corner overlay focus timer for macOS.
-Double-click run.command  or  python3 lock_in.py
+Lock-In Engine — corner overlay focus timer for macOS and Windows.
+Double-click run.command / run.bat or run python lock_in.py
 """
 
 from __future__ import annotations
@@ -78,11 +78,20 @@ class LockInEngine:
         self.theme          = THEMES[0]
         self.prev_theme: Optional[dict] = None
         self._moved         = False
-        self._cur_w         = MINI_W
-        self._cur_h         = MINI_H
+        self._mini_w        = MINI_W
+        self._mini_h        = MINI_H
+        self._full_w        = FULL_W
+        self._full_h        = FULL_H
+        self._cur_w         = self._mini_w
+        self._cur_h         = self._mini_h
         self._note_secs     = NOTE_SECS
         self._drag_ox       = 0
         self._drag_oy       = 0
+        self._resizing      = False
+        self._resize_start_w = 0
+        self._resize_start_h = 0
+        self._resize_start_x = 0
+        self._resize_start_y = 0
 
         # ── StringVars ────────────────────────────────────────────────────────
         self.sv_timer  = tk.StringVar(value="00:00")
@@ -102,7 +111,7 @@ class LockInEngine:
         self._apply_theme(self.theme)
 
         self.watcher = FocusWatcher(
-            own_app_names=["python", "python3", "lock-in"],
+            own_app_names=["python", "python3", "py", "pyw", "pythonw", "lock-in"],
             on_drift=self._on_drift,
             on_return=self._on_return,
         )
@@ -146,6 +155,11 @@ class LockInEngine:
         self.mini_frame.place_configure(width=w, height=h)
         if self.expanded:
             self.full_frame.place_configure(width=w, height=h)
+        self.mini_line.configure(wraplength=max(w - 48, 140))
+        self.sub_lbl.configure(wraplength=max(w - 36, 220))
+        self.main_lbl.configure(wraplength=max(w - 36, 220))
+        self.prog_lbl.configure(wraplength=max(w - 24, 220))
+        self._place_resize_grip()
 
     # ── Drag ─────────────────────────────────────────────────────────────────
 
@@ -157,6 +171,37 @@ class LockInEngine:
     def _drag_motion(self, e: tk.Event) -> None:
         self._moved = True
         self.root.geometry(f"+{e.x_root - self._drag_ox}+{e.y_root - self._drag_oy}")
+
+    def _place_resize_grip(self) -> None:
+        self.resize_grip.place(
+            x=max(self._cur_w - 24, 0),
+            y=max(self._cur_h - 24, 0),
+            width=22,
+            height=22,
+        )
+
+    def _resize_start(self, e: tk.Event) -> None:
+        self._resizing = True
+        self._resize_start_w = self._cur_w
+        self._resize_start_h = self._cur_h
+        self._resize_start_x = e.x_root
+        self._resize_start_y = e.y_root
+
+    def _resize_motion(self, e: tk.Event) -> None:
+        if not self._resizing:
+            return
+        if self.expanded:
+            new_w = max(420, self._resize_start_w + (e.x_root - self._resize_start_x))
+            new_h = max(560, self._resize_start_h + (e.y_root - self._resize_start_y))
+            self._full_w, self._full_h = new_w, new_h
+        else:
+            new_w = max(280, self._resize_start_w + (e.x_root - self._resize_start_x))
+            new_h = max(100, self._resize_start_h + (e.y_root - self._resize_start_y))
+            self._mini_w, self._mini_h = new_w, new_h
+        self._set_size(new_w, new_h)
+
+    def _resize_end(self, _e: tk.Event) -> None:
+        self._resizing = False
 
     # ── Build UI ──────────────────────────────────────────────────────────────
 
@@ -187,24 +232,34 @@ class LockInEngine:
         self.mini_line = tk.Label(
             self.mini_frame, textvariable=self.sv_line,
             font=("Georgia", 11, "italic"),
-            wraplength=MINI_W - 24, justify="center",
+            wraplength=MINI_W - 48, justify="center",
         )
-        self.mini_line.place(relx=0.5, y=22, anchor="n")
+        self.mini_line.place(relx=0.5, y=24, anchor="n")
 
         self.timer_mini = tk.Label(
             self.mini_frame, textvariable=self.sv_timer,
             font=("Menlo", 34, "bold"), anchor="center",
         )
-        self.timer_mini.place(relx=0.5, rely=0.5, anchor="center", y=6)
+        self.timer_mini.place(relx=0.5, rely=0.5, anchor="center", y=14)
         self.timer_mini.bind("<Button-1>",       self._drag_start)
         self.timer_mini.bind("<B1-Motion>",       self._drag_motion)
         self.timer_mini.bind("<ButtonRelease-1>", self._mini_click)
 
         self.charm_mini = tk.Label(
             self.mini_frame, textvariable=self.sv_charm,
-            font=("Menlo", 10),
+            font=("Menlo", 10, "bold"),
         )
-        self.charm_mini.place(relx=0.5, rely=1.0, anchor="s", y=-5)
+        self.charm_mini.place(relx=0.5, rely=1.0, anchor="s", y=-8)
+
+        self.resize_grip = tk.Label(
+            self.root, text="◢",
+            font=("Menlo", 12, "bold"),
+            cursor="bottom_right_corner",
+            bd=0, padx=4, pady=2,
+        )
+        self.resize_grip.bind("<Button-1>", self._resize_start)
+        self.resize_grip.bind("<B1-Motion>", self._resize_motion)
+        self.resize_grip.bind("<ButtonRelease-1>", self._resize_end)
 
         # ─── Full panel ────────────────────────────────────────────────────
         self.full_frame = tk.Frame(self.root, bd=0, highlightthickness=0)
@@ -342,6 +397,7 @@ class LockInEngine:
             text="drag to move  ·  esc to collapse  ·  ctrl+q to quit",
             font=("Menlo", 9),
         ).pack(pady=(6, 6))
+        self._place_resize_grip()
 
     # ── Tracker ───────────────────────────────────────────────────────────────
 
@@ -388,7 +444,7 @@ class LockInEngine:
         self.timer_mini.configure(bg=surf, fg=acc)
         self.drift_mini.configure(bg=surf, fg=dc)
         self.toggle_btn.configure(
-            bg=surf, fg=acc, activebackground=surf, activeforeground=acc
+            bg=acc, fg=bg, activebackground=text, activeforeground=bg
         )
 
         def _style(widget: tk.Widget) -> None:
@@ -422,6 +478,9 @@ class LockInEngine:
         self.timer_big.configure(fg=acc)
         self.charm_full.configure(fg=acc)
         self.drift_full.configure(fg=dc)
+        self.resize_grip.configure(
+            bg=surf, fg=acc, activebackground=surf, activeforeground=acc
+        )
         self.btn_primary.configure(
             bg=acc, fg=bg, activebackground=text, activeforeground=bg
         )
@@ -432,15 +491,20 @@ class LockInEngine:
                     bg=danger, fg=bg,
                     activebackground=text, activeforeground=bg,
                 )
-            elif label in {"Capture", "Later"}:
+            elif label in {"Capture", "Later", "Intention"}:
                 btn.configure(
                     bg=acc, fg=bg,
                     activebackground=text, activeforeground=bg,
                 )
+            elif label in {"Tools", "Return"}:
+                btn.configure(
+                    bg=text, fg=bg,
+                    activebackground=acc, activeforeground=bg,
+                )
             else:
                 btn.configure(
-                    bg=bg, fg=text,
-                    activebackground=acc, activeforeground=bg,
+                    bg=surf, fg=text,
+                    activebackground=text, activeforeground=bg,
                 )
         self._refresh_tracker()
 
@@ -466,8 +530,8 @@ class LockInEngine:
             self.root.after_cancel(self._anim_id)
             self._anim_id = None
 
-        target_w = FULL_W if expanding else MINI_W
-        target_h = FULL_H if expanding else MINI_H
+        target_w = self._full_w if expanding else self._mini_w
+        target_h = self._full_h if expanding else self._mini_h
 
         if expanding and not self.expanded:
             self.full_frame.place(x=0, y=0, width=self._cur_w, height=self._cur_h)
@@ -694,8 +758,8 @@ class LockInEngine:
         self._finalize_session("Completed full plan")
         self._chime(3)
         self._refresh_tracker()
-        self._animate_to(True)
         self._show_report("Completed full plan")
+        self._shutdown()
 
     def _summary_metrics(self) -> dict[str, int | str]:
         blocks_completed = 0
@@ -802,7 +866,7 @@ class LockInEngine:
         if self.state not in {"countdown", "note"}:
             return
         if messagebox.askyesno("End Session", "End this session now and save a report?"):
-            self._end_session("Ended early from app", close_after=False)
+            self._end_session("Ended early from app", close_after=True)
 
     # ── Focus watcher callbacks ───────────────────────────────────────────────
 

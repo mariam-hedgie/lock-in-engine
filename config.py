@@ -12,7 +12,7 @@ TOTAL_MINUTES  = 180
 # ── Window ───────────────────────────────────────────────────────────────────
 CORNER          = "bottom-right"   # "bottom-right" | "bottom-left" | "top-right" | "top-left"
 CORNER_MARGIN   = 20               # px from screen edge
-MINI_W, MINI_H  = 312, 100         # collapsed size
+MINI_W, MINI_H  = 332, 118         # collapsed size
 FULL_W, FULL_H  = 500, 680         # expanded size
 NOTE_H          = 740              # expanded + note field
 
@@ -47,19 +47,19 @@ GIT_AUTO_PUSH      = False         # never push automatically
 # ── Themes ────────────────────────────────────────────────────────────────────
 THEMES = [
     {"name": "Matcha Night", "bg": "#0f1410", "surface": "#1d2820",
-     "accent": "#8BE5A1", "muted": "#A8B7AB", "text": "#F4FAF5", "danger": "#FF8A78"},
+     "accent": "#9AF0AE", "muted": "#B7C5BA", "text": "#FAFFFB", "danger": "#FF6D5C"},
     {"name": "Blue Hour",    "bg": "#0d1218", "surface": "#1b2433",
-     "accent": "#94CBFF", "muted": "#A8B6C8", "text": "#F5F9FF", "danger": "#FF8A78"},
+     "accent": "#9FD2FF", "muted": "#B7C3D5", "text": "#FBFDFF", "danger": "#FF6D5C"},
     {"name": "Rose Dust",    "bg": "#150f12", "surface": "#281e24",
-     "accent": "#F39BB4", "muted": "#C0A6AE", "text": "#FFF7FB", "danger": "#FF8A78"},
+     "accent": "#FFAAC2", "muted": "#CBB3BA", "text": "#FFF9FC", "danger": "#FF6D5C"},
     {"name": "Plum Ink",     "bg": "#100c18", "surface": "#221d38",
-     "accent": "#C9B7FF", "muted": "#B1A9CD", "text": "#FBF8FF", "danger": "#FF8A78"},
+     "accent": "#D6C7FF", "muted": "#BBB3D6", "text": "#FDFCFF", "danger": "#FF6D5C"},
     {"name": "Sea Glass",    "bg": "#0c1618", "surface": "#1c2c31",
-     "accent": "#8CE6DD", "muted": "#A2B9BE", "text": "#F3FBFB", "danger": "#FF8A78"},
+     "accent": "#98F0E7", "muted": "#B1C5C9", "text": "#FAFEFE", "danger": "#FF6D5C"},
     {"name": "Amber Fog",    "bg": "#171008", "surface": "#2e220f",
-     "accent": "#FFD08A", "muted": "#C4B58E", "text": "#FFF9F0", "danger": "#FF8A78"},
+     "accent": "#FFD898", "muted": "#CCBE9B", "text": "#FFFDF7", "danger": "#FF6D5C"},
     {"name": "Cocoa Mint",   "bg": "#12100a", "surface": "#28251a",
-     "accent": "#B8E9BF", "muted": "#AFB6A3", "text": "#FFFDF5", "danger": "#FF8A78"},
+     "accent": "#C7F2CD", "muted": "#BEC4B2", "text": "#FFFDF8", "danger": "#FF6D5C"},
 ]
 
 # ── Motivational messages (shown every minute) ────────────────────────────────

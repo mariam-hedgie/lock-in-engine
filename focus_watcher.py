@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ctypes
+import platform
 import subprocess
 import threading
 import time
@@ -9,7 +11,16 @@ from config import FOCUS_POLL_SECS, FOCUS_DRIFT_GRACE
 
 
 def _get_active_app() -> str:
-    """Return the name of the frontmost macOS application."""
+    """Return the name of the frontmost app on the current platform."""
+    system = platform.system()
+    if system == "Windows":
+        return _get_active_app_windows()
+    if system == "Darwin":
+        return _get_active_app_macos()
+    return "unknown"
+
+
+def _get_active_app_macos() -> str:
     try:
         result = subprocess.run(
             ["osascript", "-e",
@@ -21,9 +32,34 @@ def _get_active_app() -> str:
         return "unknown"
 
 
+def _get_active_app_windows() -> str:
+    try:
+        user32 = ctypes.windll.user32
+        hwnd = user32.GetForegroundWindow()
+        if not hwnd:
+            return "unknown"
+
+        pid = ctypes.c_ulong()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        process = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid.value)
+        if not process:
+            return "unknown"
+        try:
+            exe_name = ctypes.create_unicode_buffer(260)
+            size = ctypes.c_ulong(len(exe_name))
+            psapi = ctypes.windll.psapi
+            if psapi.GetModuleBaseNameW(process, None, exe_name, size):
+                return exe_name.value.rsplit(".", 1)[0].lower() or "unknown"
+        finally:
+            ctypes.windll.kernel32.CloseHandle(process)
+    except Exception:
+        return "unknown"
+    return "unknown"
+
+
 class FocusWatcher:
     """
-    Polls the active macOS app every FOCUS_POLL_SECS seconds.
+    Polls the active app every FOCUS_POLL_SECS seconds.
     Calls on_drift(app_name, seconds) when the user has been away
     for more than FOCUS_DRIFT_GRACE seconds.
     Calls on_return() when they come back.
@@ -35,8 +71,7 @@ class FocusWatcher:
         on_drift: Callable[[str, int], None],
         on_return: Callable[[], None],
     ) -> None:
-        # Names that count as "still focused" (the Python process shows up
-        # as "Python" or "python3" in System Events)
+        # Names that count as "still focused" for the launcher/runtime process.
         self._own = {n.lower() for n in own_app_names}
         self._on_drift  = on_drift
         self._on_return = on_return
