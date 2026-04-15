@@ -87,7 +87,6 @@ class SessionLogger:
             f.write(f"Distractions captured: {capture_count}\n")
             f.write(f"Intentions logged   : {metrics.get('intentions', 0)}\n")
             f.write(f"Return checks       : {metrics.get('return_checks', 0)}\n")
-            f.write(f"Break glass events  : {metrics.get('break_glass', 0)}\n")
             f.write(f"Later tasks parked  : {metrics.get('later_tasks', 0)}\n")
             f.write(f"Blocks completed    : {metrics.get('blocks_completed', 0)}\n")
             f.write(f"Session score       : {metrics.get('focus_score', 'n/a')}%\n")

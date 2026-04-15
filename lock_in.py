@@ -9,7 +9,7 @@ from __future__ import annotations
 import random
 import sys
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, simpledialog
 from typing import Optional
 
 from config import (
@@ -71,7 +71,6 @@ class LockInEngine:
         self.drift_secs     = 0
         self.intentions_logged = 0
         self.return_checks = 0
-        self.break_glass_count = 0
         self.later_tasks: list[dict[str, str]] = []
         self._session_finalized = False
         self.is_drifting    = False
@@ -378,8 +377,7 @@ class LockInEngine:
              ("Intention", lambda: self._popup("intention")),
              ("Later", lambda: self._popup("later"))],
             [("Capture", lambda: self._popup("capture")),
-             ("Return", lambda: self._popup("return")),
-             ("Break Glass", lambda: self._popup("break"))],
+             ("Reset", lambda: self._popup("return"))],
             [("End Session", self._confirm_end_session)],
         ]
 
@@ -497,17 +495,12 @@ class LockInEngine:
                     bg=danger, fg=bg,
                     activebackground=text, activeforeground=bg,
                 )
-            elif label == "Break Glass":
-                btn.configure(
-                    bg="#3a1d1b", fg="#ffd9d3",
-                    activebackground=danger, activeforeground=bg,
-                )
             elif label in {"Capture", "Later", "Intention"}:
                 btn.configure(
                     bg=acc, fg=bg,
                     activebackground=text, activeforeground=bg,
                 )
-            elif label in {"Tools", "Return"}:
+            elif label in {"Tools", "Reset"}:
                 btn.configure(
                     bg=text, fg=bg,
                     activebackground=acc, activeforeground=bg,
@@ -634,7 +627,6 @@ class LockInEngine:
         self.drift_secs    = 0
         self.intentions_logged = 0
         self.return_checks = 0
-        self.break_glass_count = 0
         self.later_tasks = []
         self._session_finalized = False
         self.block_index   = 0
@@ -770,7 +762,10 @@ class LockInEngine:
         self._chime(3)
         self._refresh_tracker()
         self._show_report("Completed full plan")
-        self._shutdown()
+        if messagebox.askyesno("Go Again?", "Session finished. Start over from block 1?"):
+            self._restart_after_finish()
+        else:
+            self._shutdown()
 
     def _summary_metrics(self) -> dict[str, int | str]:
         blocks_completed = 0
@@ -791,7 +786,6 @@ class LockInEngine:
             "blocks_completed": blocks_completed,
             "intentions": self.intentions_logged,
             "return_checks": self.return_checks,
-            "break_glass": self.break_glass_count,
             "later_tasks": len(self.later_tasks),
             "focus_score": focus_score,
         }
@@ -817,7 +811,6 @@ class LockInEngine:
             f"Intentions logged: {self.intentions_logged}",
             f"Distractions captured: {self.capture_count}",
             f"Return checks: {self.return_checks}",
-            f"Break glass events: {self.break_glass_count}",
             f"Later tasks parked: {len(self.later_tasks)}",
         ]
         if self.later_tasks:
@@ -858,6 +851,73 @@ class LockInEngine:
             self._animate_to(False)
         self.root.bell()
 
+    def _reset_current_block(self) -> None:
+        if self.state != "countdown":
+            return
+        if self.session_log:
+            self.session_log.capture(
+                "return_check", "reset_block", f"block_{self.block_index + 1}",
+                "reset current block to start",
+            )
+        self.return_checks += 1
+        self._reset_focus()
+        self._start_countdown(self.block_mins, self.sv_line.get(), panic=False)
+
+    def _reset_by_minutes(self, minutes: int) -> None:
+        if self.state != "countdown":
+            return
+        self.secs_left = max(minutes * 60, self.secs_left)
+        if self.session_log:
+            self.session_log.capture(
+                "return_check", "add_time", f"{minutes}_minutes",
+                "extended current block time",
+            )
+        self.return_checks += 1
+        self._reset_focus()
+        self.sv_timer.set(fmt(self.secs_left))
+        self.sv_sub.set(f"added {minutes} minutes — back to the block")
+
+    def _prompt_reset_minutes(self) -> None:
+        if self.state != "countdown":
+            return
+        minutes = simpledialog.askinteger(
+            "Add Minutes",
+            "How many minutes should this block reset by?",
+            parent=self.root,
+            minvalue=1,
+            maxvalue=60,
+        )
+        if minutes:
+            self._reset_by_minutes(minutes)
+
+    def _reset_session(self) -> None:
+        if self.state not in {"countdown", "note"}:
+            return
+        if not messagebox.askyesno(
+            "Reset Session",
+            "Reset this session back to the beginning? This starts over from block 1.",
+        ):
+            return
+        if self.session_log:
+            self.session_log.capture("return_check", "reset_session", "session_restart", "reset to start")
+        title = self.run_title
+        tools = list(self.allowed_tools)
+        self._finalize_session("Reset whole session")
+        self.session_log = SessionLogger(title, tools)
+        self._animate_to(False)
+        self.sv_line.set(title)
+        self.sv_sub.set("starting over…")
+        self.block_index = 0
+        self.total_done = 0
+        self.drift_secs = 0
+        self.capture_count = 0
+        self.intentions_logged = 0
+        self.return_checks = 0
+        self.later_tasks = []
+        self._session_finalized = False
+        self._reset_focus()
+        self._start_next_block()
+
     def _shutdown(self) -> None:
         if self.tick_id:
             self.root.after_cancel(self.tick_id)
@@ -884,6 +944,27 @@ class LockInEngine:
             self._shutdown()
         else:
             self._animate_to(True)
+
+    def _restart_after_finish(self) -> None:
+        title = self.run_title
+        tools = ", ".join(self.allowed_tools)
+        self.session_log = SessionLogger(title, self.allowed_tools)
+        self.capture_count = 0
+        self.drift_secs = 0
+        self.intentions_logged = 0
+        self.return_checks = 0
+        self.later_tasks = []
+        self._session_finalized = False
+        self.block_index = 0
+        self.total_done = 0
+        self.sv_title.set(title)
+        self.sv_tools.set(tools)
+        self.sv_note.set("")
+        self._animate_to(False)
+        self.sv_line.set(title)
+        self.sv_sub.set("starting again…")
+        self.sv_charm.set("fresh run")
+        self._start_next_block()
 
     def _confirm_end_session(self) -> None:
         if self.state not in {"countdown", "note"}:
@@ -1049,52 +1130,27 @@ class LockInEngine:
             btn("Cancel", close, primary=False)
 
         elif kind == "return":
-            lbl("Return mode", bold=True)
-            lbl("Still on task?", color=t["muted"])
+            lbl("Reset options", bold=True)
+            lbl("Pick the reset that matches what you need.", color=t["muted"])
             def yes():
                 if self.session_log:
                     self.session_log.capture("return_check", "yes", "on_task", "confirmed")
                 self.return_checks += 1
                 self.sv_sub.set("good. stay with it.")
                 close()
-            def reset():
-                if self.session_log:
-                    self.session_log.capture("return_check", "reset", "recenter", "needed reset")
-                self.return_checks += 1
+            def reset_block():
                 close()
-                self._reset_focus()
+                self._reset_current_block()
+            def add_minutes():
+                close()
+                self._prompt_reset_minutes()
+            def reset_session():
+                close()
+                self._reset_session()
             btn("Yes, still there →", yes)
-            btn("Reset and recenter", reset, primary=False)
-            btn("I need Break Glass", lambda: (close(), self._popup("break")), primary=False)
-
-        elif kind == "break":
-            lbl("Break Glass", bold=True)
-            lbl("Use this only if you are intentionally leaving the session.", color=t["muted"])
-            lbl("Leaving for?", color=t["muted"])
-            sv_target = entry_field()
-            lbl("Why now?", color=t["muted"])
-            sv_notes  = entry_field()
-            def capture_it():
-                t2 = sv_target.get().strip() or "unspecified"
-                n  = sv_notes.get().strip() or ""
-                if self.session_log:
-                    self.session_log.capture("break_glass", "captured_instead", t2, n)
-                self.break_glass_count += 1
-                self.capture_count += 1
-                self.sv_sub.set("saved it instead — stay here")
-                self.sv_charm.set(f"captured: {t2[:24]}")
-                close()
-            def go_anyway():
-                t2 = sv_target.get().strip() or "unspecified"
-                n  = sv_notes.get().strip() or ""
-                if self.session_log:
-                    self.session_log.capture("break_glass", "override", t2, n)
-                self.break_glass_count += 1
-                self.sv_sub.set(f"break glass: {t2[:26]}")
-                self.sv_charm.set("leave briefly, then come back")
-                close()
-            btn("Save it instead →", capture_it)
-            btn("Leave session briefly", go_anyway, primary=False)
+            btn("Reset this block", reset_block, primary=False)
+            btn("Reset by minutes", add_minutes, primary=False)
+            btn("Reset whole session", reset_session, primary=False)
             btn("Cancel", close, primary=False)
 
         win.update_idletasks()
