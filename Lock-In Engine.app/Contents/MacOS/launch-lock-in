@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+set -u
+
+APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+PROJECT_DIR="$(cd "$APP_DIR/../.." && pwd)"
+LAUNCHER="$PROJECT_DIR/run.command"
+
+if [ ! -x "$LAUNCHER" ]; then
+  osascript -e 'display dialog "Lock-In Engine could not find an executable run.command file." buttons {"OK"} default button "OK" with icon stop'
+  exit 1
+fi
+
+open -a Terminal "$LAUNCHER"

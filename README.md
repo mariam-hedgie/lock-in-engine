@@ -7,6 +7,8 @@ enjoy!
 - run command doesn't double lick in mac os
 - add support for linux and windows
 - UI buttons must be clearer
+- make requirements
+- make gitignore
 
 A corner overlay focus timer for macOS. Stays on top of everything, tracks when you switch apps, and saves session logs automatically.
 
@@ -20,6 +22,7 @@ lock-in-engine/
 ├── config.py           ← all settings (corner, themes, session plan)
 ├── setup.sh            ← one-time setup
 ├── run.command         ← double-click to launch from Finder
+├── Lock-In Engine.app  ← one-click macOS app launcher
 └── logs/               ← auto-created, open in VSCode
     ├── 2025-01-15_14-30_mcat-orgo.txt
     └── 2025-01-15_14-30_mcat-orgo_captures.csv
@@ -36,7 +39,10 @@ This checks Python + tkinter, creates `logs/`, makes `run.command` executable, a
 ## Running
 
 **From Finder / Desktop:**  
-Double-click `run.command`. macOS opens a terminal and launches the app.
+Open `Lock-In Engine.app` for the easiest one-click launch.
+
+**Alternate Finder launcher:**  
+Double-click `run.command`. macOS opens a Terminal window and launches the app.
 
 **From terminal:**
 ```bash
