@@ -930,16 +930,33 @@ class LockInEngine:
             return sv
 
         def btn(text: str, cmd, primary: bool = True) -> None:
-            tk.Button(
+            base_bg = t["accent"] if primary else t["bg"]
+            base_fg = t["bg"] if primary else t["text"]
+            hover_bg = t["text"] if primary else t["accent"]
+            hover_fg = t["bg"]
+
+            button = tk.Label(
                 frame, text=text,
                 font=("Helvetica", 12, "bold"),
-                bg=t["accent"] if primary else t["bg"],
-                fg=t["bg"] if primary else t["text"],
-                relief="flat", bd=0, padx=8, pady=7,
-                activebackground=t["text"] if primary else t["accent"],
-                activeforeground=t["bg"],
-                command=cmd,
-            ).pack(fill="x", pady=2)
+                bg=base_bg, fg=base_fg,
+                padx=8, pady=10,
+                cursor="hand2",
+                anchor="center",
+            )
+            button.pack(fill="x", pady=2)
+
+            def on_enter(_event) -> None:
+                button.configure(bg=hover_bg, fg=hover_fg)
+
+            def on_leave(_event) -> None:
+                button.configure(bg=base_bg, fg=base_fg)
+
+            def on_click(_event) -> None:
+                cmd()
+
+            button.bind("<Enter>", on_enter)
+            button.bind("<Leave>", on_leave)
+            button.bind("<Button-1>", on_click)
 
         def close() -> None:
             win.destroy()
