@@ -369,28 +369,34 @@ class LockInEngine:
 
         # Action buttons
         self.action_row = tk.Frame(self.full_frame, bd=0)
-        self.action_row.pack(fill="x", padx=14, pady=(7, 0))
+        self.action_row.pack(fill="x", padx=14, pady=(10, 0))
         self._action_btns: list[tk.Button] = []
-        for idx, (label, cmd) in enumerate((
-            ("Tools",     lambda: self._popup("allowed")),
-            ("Intention", lambda: self._popup("intention")),
-            ("Later",     lambda: self._popup("later")),
-            ("Capture",   lambda: self._popup("capture")),
-            ("Return",    lambda: self._popup("return")),
-            ("🔴 Glass",  lambda: self._popup("break")),
-            ("End Session", self._confirm_end_session),
-        )):
-            b = tk.Button(
-                self.action_row, text=label,
-                font=("Helvetica", 11, "bold"),
-                relief="flat", bd=0, padx=8, pady=11,
-                command=cmd,
-            )
-            row, col = divmod(idx, 3)
-            b.grid(row=row, column=col, sticky="nsew", padx=4, pady=4)
-            self._action_btns.append(b)
-        for col in range(3):
-            self.action_row.grid_columnconfigure(col, weight=1)
+        self._action_rows: list[tk.Frame] = []
+
+        button_rows = [
+            [("Tools", lambda: self._popup("allowed")),
+             ("Intention", lambda: self._popup("intention")),
+             ("Later", lambda: self._popup("later"))],
+            [("Capture", lambda: self._popup("capture")),
+             ("Return", lambda: self._popup("return")),
+             ("Break Glass", lambda: self._popup("break"))],
+            [("End Session", self._confirm_end_session)],
+        ]
+
+        for row_items in button_rows:
+            row_frame = tk.Frame(self.action_row, bd=0)
+            row_frame.pack(fill="x", pady=4)
+            self._action_rows.append(row_frame)
+            for col, (label, cmd) in enumerate(row_items):
+                b = tk.Button(
+                    row_frame, text=label,
+                    font=("Helvetica", 11, "bold"),
+                    relief="flat", bd=0, padx=10, pady=12,
+                    command=cmd,
+                )
+                b.grid(row=0, column=col, sticky="nsew", padx=4)
+                row_frame.grid_columnconfigure(col, weight=1)
+                self._action_btns.append(b)
 
         tk.Label(
             self.full_frame,
@@ -490,6 +496,11 @@ class LockInEngine:
                 btn.configure(
                     bg=danger, fg=bg,
                     activebackground=text, activeforeground=bg,
+                )
+            elif label == "Break Glass":
+                btn.configure(
+                    bg="#3a1d1b", fg="#ffd9d3",
+                    activebackground=danger, activeforeground=bg,
                 )
             elif label in {"Capture", "Later", "Intention"}:
                 btn.configure(
@@ -835,6 +846,18 @@ class LockInEngine:
     def _show_report(self, reason: str) -> None:
         messagebox.showinfo("Session report", self._report_text(reason))
 
+    def _reset_focus(self) -> None:
+        self.is_drifting = False
+        self._on_return()
+        self.sv_line.set("Back to it.")
+        self.sv_sub.set("reset complete — return to the work in front of you")
+        self.sv_charm.set("fresh start")
+        self.root.focus_force()
+        self.root.lift()
+        if self.expanded and self.state == "countdown":
+            self._animate_to(False)
+        self.root.bell()
+
     def _shutdown(self) -> None:
         if self.tick_id:
             self.root.after_cancel(self.tick_id)
@@ -1038,15 +1061,15 @@ class LockInEngine:
                 if self.session_log:
                     self.session_log.capture("return_check", "reset", "recenter", "needed reset")
                 self.return_checks += 1
-                self.sv_sub.set("back to the tab you meant to open.")
                 close()
+                self._reset_focus()
             btn("Yes, still there →", yes)
-            btn("Reset me", reset, primary=False)
-            btn("Break Glass", lambda: (close(), self._popup("break")), primary=False)
+            btn("Reset and recenter", reset, primary=False)
+            btn("I need Break Glass", lambda: (close(), self._popup("break")), primary=False)
 
         elif kind == "break":
             lbl("Break Glass", bold=True)
-            lbl("Name it before you do it.", color=t["muted"])
+            lbl("Use this only if you are intentionally leaving the session.", color=t["muted"])
             lbl("Leaving for?", color=t["muted"])
             sv_target = entry_field()
             lbl("Why now?", color=t["muted"])
@@ -1058,6 +1081,8 @@ class LockInEngine:
                     self.session_log.capture("break_glass", "captured_instead", t2, n)
                 self.break_glass_count += 1
                 self.capture_count += 1
+                self.sv_sub.set("saved it instead — stay here")
+                self.sv_charm.set(f"captured: {t2[:24]}")
                 close()
             def go_anyway():
                 t2 = sv_target.get().strip() or "unspecified"
@@ -1065,10 +1090,12 @@ class LockInEngine:
                 if self.session_log:
                     self.session_log.capture("break_glass", "override", t2, n)
                 self.break_glass_count += 1
-                self.sv_sub.set("fine. make it brief.")
+                self.sv_sub.set(f"break glass: {t2[:26]}")
+                self.sv_charm.set("leave briefly, then come back")
                 close()
-            btn("Capture instead →", capture_it)
-            btn("Continue anyway", go_anyway, primary=False)
+            btn("Save it instead →", capture_it)
+            btn("Leave session briefly", go_anyway, primary=False)
+            btn("Cancel", close, primary=False)
 
         win.update_idletasks()
         win.geometry(f"{pw}x{win.winfo_reqheight()}+{sx}+{sy}")
