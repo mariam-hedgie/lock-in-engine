@@ -1,0 +1,25 @@
+============================================================
+LOCK-IN SESSION
+============================================================
+Title      : finance notes
+Started    : 2026-04-14 20:59:14
+Plan       : 5min → 10min → 15min → 30min → 30min → 30min → 30min → 30min
+Total      : 180 minutes
+Tools      : Canvas, PDFs, Goodnotes, ChatGPT
+============================================================
+
+
+============================================================
+FINISHED   : 2026-04-14 20:59:20
+Reason     : Ended early from app
+Elapsed    : 0:00:05
+Completed  : 0/180 min
+Drift      : ~0s across all blocks
+Distractions captured: 0
+Intentions logged   : 0
+Return checks       : 0
+Break glass events  : 0
+Later tasks parked  : 0
+Blocks completed    : 0
+Session score       : 0%
+============================================================
